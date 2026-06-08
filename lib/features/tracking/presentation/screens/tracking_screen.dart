@@ -1,116 +1,248 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dimsumnuraosxpress/core/assets/app_assets.dart';
 import 'package:dimsumnuraosxpress/core/theme/app_colors.dart';
 import 'package:dimsumnuraosxpress/core/theme/app_text_styles.dart';
+import 'package:dimsumnuraosxpress/core/widgets/app_bottom_nav.dart';
+import 'package:dimsumnuraosxpress/features/orders/state/order_provider.dart';
 
-class TrackingScreen extends StatefulWidget {
+class TrackingScreen extends ConsumerStatefulWidget {
   const TrackingScreen({super.key});
 
   @override
-  State<TrackingScreen> createState() => _TrackingScreenState();
+  ConsumerState<TrackingScreen> createState() => _TrackingScreenState();
 }
 
-class _TrackingScreenState extends State<TrackingScreen>
+class _TrackingScreenState extends ConsumerState<TrackingScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _progressAnimation;
-  int _etaMinutes = 12;
-  String _driverStatus = 'Pengemudi sedang menjemput dimsum Anda';
-
-  // Map coordinates (percentages of screen size)
-  // Merchant: (30%, 25%)
-  // Home: (75%, 70%)
-  final Offset merchantOffset = const Offset(0.30, 0.25);
-  final Offset homeOffset = const Offset(0.75, 0.70);
+  late final AnimationController _animationController;
+  bool _showMap = false;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(seconds: 15),
+      duration: const Duration(seconds: 16),
       vsync: this,
-    );
+    )..addListener(_syncStatusWithProgress);
 
-    _progressAnimation =
-        Tween<double>(begin: 0.0, end: 1.0).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: Curves.easeInOut,
-          ),
-        )..addListener(() {
-          setState(() {
-            // Dynamic status and ETA updates as progress changes
-            final progress = _progressAnimation.value;
-            if (progress < 0.4) {
-              _etaMinutes = 12 - (progress * 10).toInt();
-              _driverStatus = 'Pengemudi sedang mengambil pesanan di toko';
-            } else if (progress < 0.8) {
-              _etaMinutes = 7 - ((progress - 0.4) * 12).toInt();
-              _driverStatus =
-                  'Pengemudi sedang di perjalanan menuju alamat Anda';
-            } else {
-              _etaMinutes = 2 - ((progress - 0.8) * 10).toInt();
-              if (_etaMinutes < 1) _etaMinutes = 1;
-              _driverStatus = 'Pengemudi sudah dekat dengan lokasi Anda';
-            }
-          });
-        });
-
-    _animationController.forward().then((_) {
-      if (mounted) {
-        setState(() {
-          _etaMinutes = 0;
-          _driverStatus = 'Pengemudi telah sampai di lokasi Anda!';
-        });
-        _showArrivalDialog();
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _configureAnimationForOrder(ref.read(orderProvider));
     });
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _animationController
+      ..removeListener(_syncStatusWithProgress)
+      ..dispose();
     super.dispose();
   }
 
-  void _showArrivalDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerLowest,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+  void _syncStatusWithProgress() {
+    final order = ref.read(orderProvider);
+    if (order == null || order.status == OrderStatus.completed) return;
+
+    final progress = _animationController.value;
+    if (progress < 0.38) {
+      ref
+          .read(orderProvider.notifier)
+          .updateStatus(OrderStatus.driverToMerchant);
+    } else if (progress < 1) {
+      ref.read(orderProvider.notifier).updateStatus(OrderStatus.driverToUser);
+    }
+  }
+
+  String _formatRupiah(double amount) {
+    return 'Rp ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<ActiveOrder?>(orderProvider, (_, next) {
+      _configureAnimationForOrder(next);
+    });
+
+    final order = ref.watch(orderProvider);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: Text(
+          _showMap ? 'Live Map' : 'Pesanan',
+          style: AppTextStyles.labelMd.copyWith(
+            color: AppColors.primary,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
-          title: Text(
-            'Pesanan Tiba!',
-            style: AppTextStyles.headlineMd.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.bold,
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+          onPressed: () {
+            if (_showMap) {
+              setState(() => _showMap = false);
+              return;
+            }
+            context.canPop() ? context.pop() : context.go('/');
+          },
+        ),
+      ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 320),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.04, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
             ),
-          ),
-          content: Text(
-            'Dimsum hangat Anda sudah sampai di depan rumah. Selamat menikmati!',
-            style: AppTextStyles.bodyMd,
-          ),
-          actions: [
-            ElevatedButton(
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey(order == null ? 'empty' : (_showMap ? 'map' : 'list')),
+          child: order == null
+              ? _buildEmptyOrder(context)
+              : _showMap
+              ? _buildTracking(context, order)
+              : _buildOrderList(context, order),
+        ),
+      ),
+      bottomNavigationBar: const AppBottomNav(activeTab: AppTab.orders),
+    );
+  }
+
+  void _configureAnimationForOrder(ActiveOrder? order) {
+    if (order == null) {
+      _animationController.stop();
+      return;
+    }
+
+    if (order.status == OrderStatus.completed) {
+      _animationController
+        ..stop()
+        ..value = 1;
+      return;
+    }
+
+    final minimumProgress = switch (order.status) {
+      OrderStatus.empty ||
+      OrderStatus.paid ||
+      OrderStatus.driverToMerchant => 0.0,
+      OrderStatus.driverToUser => 0.38,
+      OrderStatus.completed => 1.0,
+    };
+
+    if (_animationController.value < minimumProgress) {
+      _animationController.value = minimumProgress;
+    }
+
+    if (_animationController.isAnimating) return;
+
+    _animationController.forward().whenComplete(() {
+      if (!mounted) return;
+      ref.read(orderProvider.notifier).updateStatus(OrderStatus.completed);
+    });
+  }
+
+  Widget _buildEmptyOrder(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: const BoxDecoration(
+                color: AppColors.secondaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.receipt_long_outlined,
+                color: AppColors.primary,
+                size: 42,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Belum ada pesanan aktif',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.headlineMd.copyWith(fontSize: 22),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Pesanan yang sudah dibayar akan muncul di sini bersama posisi driver.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMd.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              onPressed: () {
-                Navigator.of(context).pop(); // Dismiss dialog
-                context.push('/review'); // Go to review screen
-              },
-              child: Text(
-                'Beri Penilaian',
-                style: AppTextStyles.labelMd.copyWith(color: Colors.white),
+              onPressed: () => context.go('/'),
+              icon: const Icon(Icons.home),
+              label: const Text('Kembali ke Beranda'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTracking(BuildContext context, ActiveOrder order) {
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, _) {
+        final progress = order.status == OrderStatus.completed
+            ? 1.0
+            : _animationController.value;
+
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _TrackingMapPainter(progress),
+                child: Container(color: const Color(0xFFEAF3EA)),
+              ),
+            ),
+            Positioned(
+              left: 20,
+              right: 20,
+              top: 16,
+              child: _OrderHeaderCard(
+                orderId: order.orderId,
+                statusText: _statusText(order.status),
+                eta: _etaText(order.status, progress),
+              ),
+            ),
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 20,
+              child: _DriverStatusCard(
+                order: order,
+                progress: progress,
+                statusText: _statusText(order.status),
+                total: _formatRupiah(order.total),
+                canRate:
+                    order.status == OrderStatus.completed && !order.hasRated,
+                hasRated: order.hasRated,
+                onRate: () => context.push('/review'),
               ),
             ),
           ],
@@ -119,355 +251,380 @@ class _TrackingScreenState extends State<TrackingScreen>
     );
   }
 
-  // Linear interpolation between two coordinates
-  Offset _getDriverPosition(double progress) {
-    // We can add a slight curve to make it look realistic (Bézier-like)
-    // Merchant (30%, 25%) -> Control point (55%, 35%) -> Home (75%, 70%)
-    double t = progress;
-    double x =
-        (1 - t) * (1 - t) * merchantOffset.dx +
-        2 * (1 - t) * t * 0.55 +
-        t * t * homeOffset.dx;
-    double y =
-        (1 - t) * (1 - t) * merchantOffset.dy +
-        2 * (1 - t) * t * 0.35 +
-        t * t * homeOffset.dy;
-    return Offset(x, y);
+  Widget _buildOrderList(BuildContext context, ActiveOrder order) {
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, _) {
+        final progress = order.status == OrderStatus.completed
+            ? 1.0
+            : _animationController.value;
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          children: [
+            _OrderListCard(
+              order: order,
+              statusText: _statusText(order.status),
+              eta: _etaText(order.status, progress),
+              total: _formatRupiah(order.total),
+              onTap: () => setState(() => _showMap = true),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _statusText(OrderStatus status) {
+    return switch (status) {
+      OrderStatus.empty => 'Belum ada pesanan',
+      OrderStatus.paid => 'Pembayaran berhasil',
+      OrderStatus.driverToMerchant => 'Driver menuju toko mitra',
+      OrderStatus.driverToUser => 'Driver menuju alamat Anda',
+      OrderStatus.completed => 'Pesanan selesai',
+    };
+  }
+
+  String _etaText(OrderStatus status, double progress) {
+    if (status == OrderStatus.completed) return 'Selesai';
+    final eta = (18 - (progress * 17)).clamp(1, 18).round();
+    return '$eta mnt';
+  }
+}
+
+class _OrderListCard extends StatelessWidget {
+  const _OrderListCard({
+    required this.order,
+    required this.statusText,
+    required this.eta,
+    required this.total,
+    required this.onTap,
+  });
+
+  final ActiveOrder order;
+  final String statusText;
+  final String eta;
+  final String total;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: AppColors.outlineVariant.withValues(alpha: 0.45),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: const BoxDecoration(
+                    color: AppColors.secondaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.receipt_long,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        order.orderId,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.labelMd.copyWith(fontSize: 16),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        statusText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    eta,
+                    style: AppTextStyles.labelMd.copyWith(
+                      color: AppColors.onSecondaryContainer,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                children: [
+                  for (final item in order.items)
+                    _OrderItemRow(
+                      name: item.name,
+                      quantity: item.quantity,
+                      price: item.price,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${order.totalItems} menu',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                Text(
+                  total,
+                  style: AppTextStyles.labelMd.copyWith(
+                    color: AppColors.primary,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                const Icon(
+                  Icons.map_outlined,
+                  color: AppColors.primary,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Lihat live map',
+                    style: AppTextStyles.labelMd.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderItemRow extends StatelessWidget {
+  const _OrderItemRow({
+    required this.name,
+    required this.quantity,
+    required this.price,
+  });
+
+  final String name;
+  final int quantity;
+  final double price;
+
+  String _formatRupiah(double amount) {
+    return 'Rp ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Lacak Pesanan - Dimsum Nuraos',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.labelMd.copyWith(
-            color: AppColors.primary,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '$quantity',
+              style: AppTextStyles.labelSm.copyWith(color: AppColors.primary),
+            ),
           ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primaryLight,
-                border: Border.all(color: AppColors.primary, width: 2),
-                image: const DecorationImage(
-                  image: NetworkImage(AppAssets.profileAvatar),
-                  fit: BoxFit.cover,
-                ),
-              ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodyMd,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _formatRupiah(price * quantity),
+            style: AppTextStyles.labelSm.copyWith(
+              color: AppColors.onSurfaceVariant,
             ),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0),
-          child: Container(
-            color: AppColors.outlineVariant.withValues(alpha: 0.5),
-            height: 1.0,
-          ),
-        ),
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final double width = constraints.maxWidth;
-          final double height = constraints.maxHeight;
-
-          // Get exact pixel offsets
-          final Offset merchantPixel = Offset(
-            merchantOffset.dx * width,
-            merchantOffset.dy * height,
-          );
-          final Offset homePixel = Offset(
-            homeOffset.dx * width,
-            homeOffset.dy * height,
-          );
-          final Offset driverOffsetPercent = _getDriverPosition(
-            _progressAnimation.value,
-          );
-          final Offset driverPixel = Offset(
-            driverOffsetPercent.dx * width,
-            driverOffsetPercent.dy * height,
-          );
-
-          return Stack(
-            children: [
-              // Map Background image (centered, cover)
-              Positioned.fill(
-                child: Opacity(
-                  opacity: 0.85,
-                  child: Image.network(
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuBN7bGl4LefwBLwdEAhBD406B5RlUjbJcy5MzX_8z5cta544Ll7H1TRt3xOtk1aI1TDUowfH_YJ-pHPJg0WGi73tlCkuDAwfGaiNRYXDyH4d9Mf89Dwur0086UNHN7pONlt-HK2ZvWlwcF7JK3Ss5AfUz7pRKqvwhanrRyh0VNYkp51ah4uSC6M4jSEIdnWU8n7vTzUUWzGoKZAAUeL3NVrEdvwQk4H-1O1ajApI1_Pc5YuR8Tc6oT9bYQaJyFcaXpTlQ_q32OfCfU',
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-
-              // Map Gradient Overlays to match the web style
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppColors.background.withValues(alpha: 0.8),
-                        Colors.transparent,
-                        Colors.transparent,
-                        AppColors.background,
-                      ],
-                      stops: const [0.0, 0.2, 0.8, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Path Custom Painter
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _RoutePainter(merchantPixel, homePixel),
-                ),
-              ),
-
-              // Merchant Marker
-              Positioned(
-                left: merchantPixel.dx - 50,
-                top: merchantPixel.dy - 60,
-                child: SizedBox(
-                  width: 100,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          'Dimsum Nuraos',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.labelSm.copyWith(
-                            color: Colors.white,
-                            fontSize: 9,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 4,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.restaurant,
-                          color: AppColors.primary,
-                          size: 18,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // User Home Marker
-              Positioned(
-                left: homePixel.dx - 50,
-                top: homePixel.dy - 60,
-                child: SizedBox(
-                  width: 100,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.onBackground,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          'Rumah Anda',
-                          style: AppTextStyles.labelSm.copyWith(
-                            color: Colors.white,
-                            fontSize: 9,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 4,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.home,
-                          color: AppColors.onBackground,
-                          size: 18,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Driver Marker (animating along route)
-              Positioned(
-                left: driverPixel.dx - 22,
-                top: driverPixel.dy - 22,
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.motorcycle,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ),
-              ),
-
-              // Floating Driver Status Card
-              Positioned(
-                bottom: 24,
-                left: 20,
-                right: 20,
-                child: _buildDriverCard(),
-              ),
-            ],
-          );
-        },
       ),
     );
   }
+}
 
-  Widget _buildDriverCard() {
+class _OrderHeaderCard extends StatelessWidget {
+  const _OrderHeaderCard({
+    required this.orderId,
+    required this.statusText,
+    required this.eta,
+  });
+
+  final String orderId;
+  final String statusText;
+  final String eta;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              color: AppColors.secondaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.delivery_dining, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  statusText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.labelMd.copyWith(fontSize: 16),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  orderId,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            eta,
+            style: AppTextStyles.headlineMd.copyWith(
+              color: AppColors.primary,
+              fontSize: 20,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DriverStatusCard extends StatelessWidget {
+  const _DriverStatusCard({
+    required this.order,
+    required this.progress,
+    required this.statusText,
+    required this.total,
+    required this.canRate,
+    required this.hasRated,
+    required this.onRate,
+  });
+
+  final ActiveOrder order;
+  final double progress;
+  final String statusText;
+  final String total;
+  final bool canRate;
+  final bool hasRated;
+  final VoidCallback onRate;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: AppColors.outlineVariant.withValues(alpha: 0.3),
+          color: AppColors.outlineVariant.withValues(alpha: 0.35),
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.12),
-            blurRadius: 32,
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ETA Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Estimasi Tiba',
-                    style: AppTextStyles.labelSm.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _etaMinutes > 0 ? '$_etaMinutes mnt' : 'Sampai',
-                    style: AppTextStyles.headlineMd.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: AppColors.secondaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.timer,
-                  color: AppColors.onSecondaryContainer,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            height: 1,
-            color: AppColors.outlineVariant.withValues(alpha: 0.2),
-          ),
-          const SizedBox(height: 12),
-          // Driver Info
           Row(
             children: [
               Stack(
@@ -476,25 +633,22 @@ class _TrackingScreenState extends State<TrackingScreen>
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
+                      color: AppColors.secondaryContainer,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.secondaryContainer,
-                        width: 2,
-                      ),
-                      image: const DecorationImage(
-                        image: NetworkImage(
-                          'https://lh3.googleusercontent.com/aida-public/AB6AXuDX2IxKCdUuMcHsCt5uCkIObUOtVZwXEp829CmrSkQyCe-Mccxy9vUkasca0ZCvTDS2J8Pgkr-F0j8WG1YWTB7JPNargl-CRr8dJqjYTGfD_gL4IMYq8Uz9eqq7c9zbya3RTcjWKoT4LNB50rEkrucIJ3fn5sae_ZuDxTA4c4EGxCEstWtdYg4YrT0lwZgcTV4o9gQAUbKpT6lqccY2xm6vp10AGmkWnqPvyCHAF7hLItrBbj1UWV5S_E83Da6vzBhUjJReRooyXwY',
-                        ),
-                        fit: BoxFit.cover,
-                      ),
+                      border: Border.all(color: Colors.white, width: 3),
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      color: AppColors.primary,
+                      size: 30,
                     ),
                   ),
                   Positioned(
-                    bottom: 0,
                     right: 0,
+                    bottom: 0,
                     child: Container(
-                      width: 14,
-                      height: 14,
+                      width: 15,
+                      height: 15,
                       decoration: BoxDecoration(
                         color: Colors.green,
                         shape: BoxShape.circle,
@@ -504,127 +658,118 @@ class _TrackingScreenState extends State<TrackingScreen>
                   ),
                 ],
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Budi',
-                          style: AppTextStyles.labelMd.copyWith(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceContainer,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'T 1987 BC',
-                            style: AppTextStyles.labelSm.copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Budi - T 1987 BC',
+                      style: AppTextStyles.labelMd.copyWith(fontSize: 16),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _driverStatus,
-                      style: AppTextStyles.bodySm.copyWith(
-                        fontStyle: FontStyle.italic,
-                        fontSize: 12,
-                      ),
+                      statusText,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodySm.copyWith(fontSize: 12),
                     ),
                   ],
                 ),
               ),
+              IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Menghubungi driver...')),
+                  );
+                },
+                icon: const Icon(Icons.call),
+              ),
             ],
           ),
-          const SizedBox(height: 16),
-          // Action Buttons
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: AppColors.surfaceContainer,
+              valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+            ),
+          ),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Menghubungi Chat Budi...')),
-                    );
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.chat, size: 18, color: Colors.white),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Pesan',
-                        style: AppTextStyles.labelMd.copyWith(
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
+                child: _MiniSummary(
+                  label: '${order.totalItems} menu',
+                  value: order.merchantName,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.outline),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Menghubungi Telepon Budi...'),
-                      ),
-                    );
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.call,
-                        size: 18,
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Telepon',
-                        style: AppTextStyles.labelMd.copyWith(
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: _MiniSummary(label: 'Total', value: total),
               ),
             ],
+          ),
+          if (canRate || hasRated) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: hasRated
+                      ? AppColors.surfaceContainer
+                      : AppColors.primary,
+                  foregroundColor: hasRated
+                      ? AppColors.onSurfaceVariant
+                      : Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: canRate ? onRate : null,
+                icon: Icon(hasRated ? Icons.check_circle : Icons.star),
+                label: Text(hasRated ? 'Rating terkirim' : 'Beri Rating'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniSummary extends StatelessWidget {
+  const _MiniSummary({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppTextStyles.labelSm),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.labelMd.copyWith(fontSize: 13),
           ),
         ],
       ),
@@ -632,44 +777,103 @@ class _TrackingScreenState extends State<TrackingScreen>
   }
 }
 
-class _RoutePainter extends CustomPainter {
-  final Offset start;
-  final Offset end;
+class _TrackingMapPainter extends CustomPainter {
+  const _TrackingMapPainter(this.progress);
 
-  _RoutePainter(this.start, this.end);
+  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.6)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round;
+    final roadPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.86)
+      ..strokeWidth = 24
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final blockPaint = Paint()..color = const Color(0xFFD8E8DB);
 
-    final path = Path();
-    path.moveTo(start.dx, start.dy);
-
-    // Quad curve representation matching route line
-    // Control point at (55%, 35%) of screen size
-    final controlPoint = Offset(0.55 * size.width, 0.35 * size.height);
-    path.quadraticBezierTo(controlPoint.dx, controlPoint.dy, end.dx, end.dy);
-
-    // Draw dashed path
-    final dashWidth = 8.0;
-    final dashSpace = 8.0;
-    double distance = 0.0;
-
-    for (var pathMetric in path.computeMetrics()) {
-      while (distance < pathMetric.length) {
-        canvas.drawPath(
-          pathMetric.extractPath(distance, distance + dashWidth),
-          paint,
-        );
-        distance += dashWidth + dashSpace;
-      }
+    for (var i = 0; i < 7; i++) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            (i % 3) * size.width * 0.34 + 12,
+            (i ~/ 3) * size.height * 0.22 + 92,
+            size.width * 0.24,
+            size.height * 0.12,
+          ),
+          const Radius.circular(18),
+        ),
+        blockPaint,
+      );
     }
+
+    for (final y in [0.28, 0.48, 0.68]) {
+      canvas.drawLine(
+        Offset(-20, size.height * y),
+        Offset(size.width + 20, size.height * (y - 0.10)),
+        roadPaint,
+      );
+    }
+    for (final x in [0.20, 0.56, 0.86]) {
+      canvas.drawLine(
+        Offset(size.width * x, 0),
+        Offset(size.width * (x - 0.18), size.height),
+        roadPaint,
+      );
+    }
+
+    final merchant = Offset(size.width * 0.34, size.height * 0.34);
+    final user = Offset(size.width * 0.75, size.height * 0.62);
+    final path = Path()
+      ..moveTo(merchant.dx, merchant.dy)
+      ..quadraticBezierTo(
+        size.width * 0.53,
+        size.height * 0.42,
+        user.dx,
+        user.dy,
+      );
+    final routePaint = Paint()
+      ..color = AppColors.primary
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(path, routePaint);
+
+    final driver = _pointOnPath(path, progress);
+    _drawMarker(canvas, merchant, AppColors.primary, Icons.storefront);
+    _drawMarker(canvas, user, AppColors.onBackground, Icons.home);
+    _drawMarker(canvas, driver, const Color(0xFF0E9F6E), Icons.motorcycle);
+  }
+
+  Offset _pointOnPath(Path path, double t) {
+    final metric = path.computeMetrics().first;
+    final tangent = metric.getTangentForOffset(metric.length * t);
+    return tangent?.position ?? Offset.zero;
+  }
+
+  void _drawMarker(Canvas canvas, Offset center, Color color, IconData icon) {
+    canvas.drawCircle(center, 22, Paint()..color = Colors.white);
+    canvas.drawCircle(center, 16, Paint()..color = color);
+
+    final painter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          color: Colors.white,
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          fontSize: 18,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(
+      canvas,
+      center - Offset(painter.width / 2, painter.height / 2),
+    );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _TrackingMapPainter oldDelegate) {
+    return oldDelegate.progress != progress;
+  }
 }

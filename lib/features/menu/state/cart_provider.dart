@@ -1,29 +1,47 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CartItem {
+  final String id;
   final String name;
   final String chineseName;
   final double price;
   final String image;
   final String description;
+  final String merchantName;
+  final String merchantDistance;
+  final double rating;
+  final String soldCount;
+  final String badge;
   final int quantity;
 
   CartItem({
+    String? id,
     required this.name,
     this.chineseName = '',
     required this.price,
     required this.image,
     required this.description,
+    this.merchantName = 'Dimsum Nuraos Express',
+    this.merchantDistance = '0.8 km',
+    this.rating = 4.8,
+    this.soldCount = '500+ terjual',
+    this.badge = '',
     this.quantity = 1,
-  });
+  }) : id = id ?? name;
 
   CartItem copyWith({int? quantity}) {
     return CartItem(
+      id: id,
       name: name,
       chineseName: chineseName,
       price: price,
       image: image,
       description: description,
+      merchantName: merchantName,
+      merchantDistance: merchantDistance,
+      rating: rating,
+      soldCount: soldCount,
+      badge: badge,
       quantity: quantity ?? this.quantity,
     );
   }
@@ -54,7 +72,7 @@ class CartNotifier extends Notifier<CartState> {
   }
 
   void addItem(CartItem item) {
-    final existingIndex = state.items.indexWhere((i) => i.name == item.name);
+    final existingIndex = state.items.indexWhere((i) => i.id == item.id);
     if (existingIndex >= 0) {
       final updatedItems = List<CartItem>.from(state.items);
       final existingItem = updatedItems[existingIndex];
@@ -67,8 +85,8 @@ class CartNotifier extends Notifier<CartState> {
     }
   }
 
-  void removeItem(String name) {
-    final existingIndex = state.items.indexWhere((i) => i.name == name);
+  void removeItem(String id) {
+    final existingIndex = state.items.indexWhere((i) => i.id == id);
     if (existingIndex >= 0) {
       final updatedItems = List<CartItem>.from(state.items);
       final existingItem = updatedItems[existingIndex];

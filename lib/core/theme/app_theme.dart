@@ -47,4 +47,64 @@ class AppTheme {
       ),
     );
   }
+
+  static ThemeData get darkTheme {
+    const darkSurface = Color(0xFF111827);
+    const darkSurfaceContainer = Color(0xFF1F2937);
+    const darkOnSurface = Color(0xFFF9FAFB);
+    const darkOnSurfaceVariant = Color(0xFFD1D5DB);
+
+    return ThemeData(
+      useMaterial3: true,
+      scaffoldBackgroundColor: darkSurface,
+      colorScheme: const ColorScheme(
+        brightness: Brightness.dark,
+        primary: AppColors.primaryLight,
+        onPrimary: AppColors.onBackground,
+        primaryContainer: AppColors.primary,
+        onPrimaryContainer: AppColors.onPrimary,
+        secondary: AppColors.secondaryContainer,
+        onSecondary: AppColors.onBackground,
+        secondaryContainer: AppColors.secondary,
+        onSecondaryContainer: AppColors.onSecondary,
+        tertiary: AppColors.tertiaryFixed,
+        onTertiary: AppColors.onBackground,
+        error: AppColors.errorContainer,
+        onError: AppColors.onErrorContainer,
+        surface: darkSurface,
+        onSurface: darkOnSurface,
+        surfaceContainerHighest: darkSurfaceContainer,
+        onSurfaceVariant: darkOnSurfaceVariant,
+        outline: AppColors.outlineVariant,
+        outlineVariant: AppColors.outline,
+      ),
+      textTheme: TextTheme(
+        headlineLarge: AppTextStyles.headlineLg.copyWith(color: darkOnSurface),
+        headlineMedium: AppTextStyles.headlineMd.copyWith(color: darkOnSurface),
+        bodyLarge: AppTextStyles.bodyLg.copyWith(color: darkOnSurface),
+        bodyMedium: AppTextStyles.bodyMd.copyWith(color: darkOnSurface),
+        bodySmall: AppTextStyles.bodySm.copyWith(color: darkOnSurfaceVariant),
+        labelLarge: AppTextStyles.labelMd.copyWith(color: darkOnSurface),
+        labelSmall: AppTextStyles.labelSm.copyWith(color: darkOnSurfaceVariant),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: darkSurface,
+        foregroundColor: AppColors.primaryLight,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? AppColors.primaryLight
+              : darkOnSurfaceVariant;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? AppColors.primary.withValues(alpha: 0.55)
+              : darkSurfaceContainer;
+        }),
+      ),
+    );
+  }
 }

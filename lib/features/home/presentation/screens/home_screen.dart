@@ -1,35 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dimsumnuraosxpress/core/assets/app_assets.dart';
 import 'package:dimsumnuraosxpress/core/theme/app_colors.dart';
 import 'package:dimsumnuraosxpress/core/theme/app_text_styles.dart';
+import 'package:dimsumnuraosxpress/core/widgets/app_bottom_nav.dart';
+import 'package:dimsumnuraosxpress/core/widgets/app_image.dart';
+import 'package:dimsumnuraosxpress/core/widgets/skeleton_loader.dart';
+import 'package:dimsumnuraosxpress/features/menu/data/mock_dish_data.dart';
+import 'package:dimsumnuraosxpress/features/menu/presentation/widgets/menu_detail_sheet.dart';
+import 'package:dimsumnuraosxpress/features/menu/state/cart_provider.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
+  String _formatRupiah(double amount) {
+    return 'Rp ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: AppColors.primary),
-          onPressed: () {},
-        ),
+        centerTitle: true,
         title: Text(
-          'Dimsum Nuraos',
+          'Dimsum Nuraos Express',
           style: AppTextStyles.labelMd.copyWith(
             color: AppColors.primary,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 16.0),
+            padding: const EdgeInsets.only(right: 16),
             child: Container(
               width: 40,
               height: 40,
@@ -45,65 +53,46 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0),
-          child: Container(
-            color: AppColors.outlineVariant.withValues(alpha: 0.5),
-            height: 1.0,
-          ),
-        ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
+      body: BackendLoadingSimulator(
+        delay: const Duration(milliseconds: 1300),
+        skeleton: const _HomeSkeleton(),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 108),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search Section
               _buildSearchSection(),
+              const SizedBox(height: 18),
+              _buildHero(context),
               const SizedBox(height: 24),
-
-              // Promo Hangat Section
-              _buildSectionHeader(context, 'Promo Hangat', () {}),
-              const SizedBox(height: 12),
-              _buildPromoCarousel(),
-              const SizedBox(height: 24),
-
-              // Terlaris Section
-              _buildSectionHeader(context, 'Terlaris', () {}),
-              const SizedBox(height: 12),
-              _buildBestSellers(),
-              const SizedBox(height: 24),
-
-              // Mitra Terdekat Section
-              _buildSectionHeader(
-                context,
-                'Mitra Terdekat',
-                () {},
-                showFilter: true,
+              _SectionHeader(
+                title: 'Top Menu Mitra',
+                actionLabel: 'Semua Menu',
+                onTap: () => context.push('/menu'),
               ),
               const SizedBox(height: 12),
-              _buildNearbyMerchants(context),
-              const SizedBox(height: 40),
+              _buildBestSellerList(context, ref),
+              const SizedBox(height: 24),
+              _SectionHeader(title: 'Mitra Paling Ramai'),
+              const SizedBox(height: 12),
+              _buildMerchantGrid(context),
             ],
           ),
         ),
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 16.0),
-        child: FloatingActionButton(
-          backgroundColor: AppColors.primary,
-          shape: const CircleBorder(),
-          elevation: 6,
-          onPressed: () => context.push('/menu'),
-          child: const Icon(
-            Icons.restaurant_menu,
-            color: AppColors.onPrimary,
-            size: 28,
-          ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primary,
+        shape: const CircleBorder(),
+        elevation: 4,
+        onPressed: () => context.push('/menu'),
+        child: const Icon(
+          Icons.restaurant_menu,
+          color: AppColors.onPrimary,
+          size: 28,
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(context),
+      bottomNavigationBar: const AppBottomNav(activeTab: AppTab.home),
     );
   }
 
@@ -112,36 +101,26 @@ class HomeScreen extends StatelessWidget {
       children: [
         Expanded(
           child: Container(
-            height: 56,
+            height: 54,
             decoration: BoxDecoration(
               color: AppColors.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: AppColors.outlineVariant.withValues(alpha: 0.5),
+                color: AppColors.outlineVariant.withValues(alpha: 0.45),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
-            child: const Row(
+            child: Row(
               children: [
-                SizedBox(width: 16),
-                Icon(Icons.search, color: AppColors.onSurfaceVariant),
-                SizedBox(width: 12),
+                const SizedBox(width: 16),
+                const Icon(Icons.search, color: AppColors.onSurfaceVariant),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Cari dimsum disini aja!',
-                      border: InputBorder.none,
-                      hintStyle: TextStyle(
-                        fontFamily: 'Be Vietnam Pro',
-                        fontSize: 16,
-                        color: AppColors.onSurfaceVariant,
-                      ),
+                  child: Text(
+                    'Cari siomay, hakau, paket keluarga...',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodyMd.copyWith(
+                      color: AppColors.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -149,29 +128,423 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 12),
-        Container(
-          height: 56,
-          width: 56,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.tune, color: AppColors.onPrimary),
-            onPressed: () {},
-          ),
-        ),
       ],
     );
   }
 
-  Widget _buildSectionHeader(
-    BuildContext context,
-    String title,
-    VoidCallback onSeeAll, {
-    bool showFilter = false,
-  }) {
+  Widget _buildHero(BuildContext context) {
+    return Container(
+      height: 210,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.12),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const AppImage(source: AppAssets.dimsumDeliveryHero),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.74),
+                    Colors.black.withValues(alpha: 0.22),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'PROMO MITRA TOP',
+                      style: AppTextStyles.labelSm.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Dimsum hangat dari mitra favorit',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.headlineMd.copyWith(
+                      color: Colors.white,
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Pilih best seller, masuk keranjang, driver siap jemput.',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBestSellerList(BuildContext context, WidgetRef ref) {
+    return SizedBox(
+      height: 252,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: mockBestSellerItems.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 14),
+        itemBuilder: (context, index) {
+          final item = mockBestSellerItems[index];
+          return _BestSellerCard(
+            item: item,
+            price: _formatRupiah(item.price),
+            onOpenMenu: () => _showMenuDetail(context, ref, item),
+            onAdd: () {
+              ref.read(cartProvider.notifier).addItem(item);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${item.name} masuk keranjang'),
+                  duration: const Duration(milliseconds: 900),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMerchantGrid(BuildContext context) {
+    final merchants = mockMerchantNames;
+
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: merchants.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.55,
+      ),
+      itemBuilder: (context, index) {
+        final name = merchants[index];
+        final item = mockBestSellerItems[index % mockBestSellerItems.length];
+        return InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => context.push('/menu'),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: AppColors.outlineVariant.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Row(
+              children: [
+                AppImage(
+                  source: AppAssets.dimsumDeliveryHero,
+                  width: 58,
+                  height: 58,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.labelMd.copyWith(fontSize: 13),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            color: AppColors.primary,
+                            size: 13,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            item.rating.toStringAsFixed(1),
+                            style: AppTextStyles.labelSm.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              item.merchantDistance,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.labelSm.copyWith(
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        item.badge,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.labelSm.copyWith(
+                          color: AppColors.secondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<CartItem> _relatedItemsFor(CartItem selectedItem) {
+    return mockAllMenuItems.where((item) {
+      return item.merchantName == selectedItem.merchantName &&
+          item.id != selectedItem.id;
+    }).toList();
+  }
+
+  void _showMenuDetail(BuildContext context, WidgetRef ref, CartItem item) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return MenuDetailSheet(
+          item: item,
+          relatedItems: _relatedItemsFor(item),
+          formatPrice: _formatRupiah,
+          onAdd: (selectedItem) =>
+              _addItemFromDetail(context, ref, selectedItem),
+          onOpenRelated: (relatedItem) {
+            Navigator.of(sheetContext).pop();
+            Future<void>.microtask(() {
+              if (!context.mounted) return;
+              _showMenuDetail(context, ref, relatedItem);
+            });
+          },
+        );
+      },
+    );
+  }
+
+  void _addItemFromDetail(BuildContext context, WidgetRef ref, CartItem item) {
+    ref.read(cartProvider.notifier).addItem(item);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${item.name} masuk keranjang'),
+        duration: const Duration(milliseconds: 900),
+      ),
+    );
+  }
+}
+
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 108),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonBox(height: 54, borderRadius: 14),
+          const SizedBox(height: 18),
+          const SkeletonBox(height: 210, borderRadius: 18),
+          const SizedBox(height: 24),
+          const _SkeletonSectionHeader(),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 252,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: 4,
+              separatorBuilder: (_, _) => const SizedBox(width: 14),
+              itemBuilder: (context, index) => const _BestSellerCardSkeleton(),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const SkeletonBox(width: 190, height: 26, borderRadius: 8),
+          const SizedBox(height: 12),
+          GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: 4,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.55,
+            ),
+            itemBuilder: (context, index) => const _MerchantCardSkeleton(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkeletonSectionHeader extends StatelessWidget {
+  const _SkeletonSectionHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        SkeletonBox(width: 170, height: 26, borderRadius: 8),
+        SkeletonBox(width: 82, height: 18, borderRadius: 8),
+      ],
+    );
+  }
+}
+
+class _BestSellerCardSkeleton extends StatelessWidget {
+  const _BestSellerCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 188,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.outlineVariant.withValues(alpha: 0.25),
+        ),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SkeletonBox(height: 116, borderRadius: 14),
+          Padding(
+            padding: EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 120, height: 16, borderRadius: 6),
+                SizedBox(height: 8),
+                SkeletonBox(width: 92, height: 12, borderRadius: 6),
+                SizedBox(height: 14),
+                SkeletonBox(width: 110, height: 12, borderRadius: 6),
+                SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SkeletonBox(width: 82, height: 16, borderRadius: 6),
+                    SkeletonBox(width: 32, height: 32, borderRadius: 10),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MerchantCardSkeleton extends StatelessWidget {
+  const _MerchantCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.outlineVariant.withValues(alpha: 0.25),
+        ),
+      ),
+      child: const Row(
+        children: [
+          SkeletonBox(width: 58, height: 58, borderRadius: 12),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(
+                  width: double.infinity,
+                  height: 14,
+                  borderRadius: 6,
+                ),
+                SizedBox(height: 8),
+                SkeletonBox(width: 82, height: 10, borderRadius: 6),
+                SizedBox(height: 8),
+                SkeletonBox(width: 64, height: 10, borderRadius: 6),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, this.actionLabel, this.onTap});
+
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -180,719 +553,168 @@ class HomeScreen extends StatelessWidget {
           style: AppTextStyles.headlineMd.copyWith(
             color: AppColors.onBackground,
             fontWeight: FontWeight.bold,
+            fontSize: 21,
           ),
         ),
-        if (showFilter)
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainer,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.filter_list,
-              color: AppColors.primary,
-              size: 20,
-            ),
-          )
-        else
+        if (actionLabel != null)
           TextButton(
-            onPressed: onSeeAll,
+            onPressed: onTap,
             child: Text(
-              'Lihat Semua',
+              actionLabel!,
               style: AppTextStyles.labelMd.copyWith(color: AppColors.primary),
             ),
           ),
       ],
     );
   }
+}
 
-  Widget _buildPromoCarousel() {
-    final List<Map<String, String>> promos = [
-      {
-        'title': 'Diskon 20% untuk Dimsum Ayam',
-        'subtitle': 'Berlaku sampai tengah malam • Dimsum Nuraos',
-        'tag': 'PENAWARAN TERBATAS',
-        'image':
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuDRiZcQvE42wn0W6GvNyYzce3EkVh6BJ9SrmGBDotAQQOIAJ6JZ3syfnhEQSrXepe0S1e3snXyXP0iv3j7NHDp9TEu8FLB2RigtgknmaUzZy1aVskWnaBR4f-jRJWp8FuhNfLP7tKws3um9bmKPebYF7JLBcnB1fjT03348hoZolCWgN7pF7xM3Kg1GNSSC9p0BcOvF_amV1T05D2BFu7MZBldnO7LZEcmIIpmpFhP7Pw8HD7gF5CxvblTGUwHo8WWUwmYB9mWPmRw',
-        'tagBg': '0xFF9E3D00',
-        'tagFg': '0xFFFFFFFF',
-      },
-      {
-        'title': 'Siomay Udang Premium',
-        'subtitle': 'Coba resep baru kami hari ini!',
-        'tag': 'BARU DATANG',
-        'image':
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuCujCzKCpy0mOStvUqevVVzDnfR-rMhbNKBNFIx9EEP5uiNwT07KUza6rY8LxgAzqlEoLsMB2tnonhESc4oEgt4Y6ABjigsHqS943C-YiIlNEtadjZWYIPpXHLOWw3t0Lqa7gvNHGatbXihSgMtMHZGTrSbOXtnhnjc8ud8eh1BzZBVBGuZFXj0Xb-k2VAnfYN60KPHx1_aGx0rnjwnpVY6t_VqGacFxAea2AwlQ1nbI8TdcQX7YCDdak4AHTjTXfInXNd6Et0kVrc',
-        'tagBg': '0xFF8C7042',
-        'tagFg': '0xFFFFFBFF',
-      },
-    ];
+class _BestSellerCard extends StatelessWidget {
+  const _BestSellerCard({
+    required this.item,
+    required this.price,
+    required this.onOpenMenu,
+    required this.onAdd,
+  });
 
-    return SizedBox(
-      height: 192,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: promos.length,
-        itemBuilder: (context, index) {
-          final promo = promos[index];
-          return Container(
-            width: 320,
-            margin: const EdgeInsets.only(right: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              image: DecorationImage(
-                image: NetworkImage(promo['image']!),
-                fit: BoxFit.cover,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
+  final CartItem item;
+  final String price;
+  final VoidCallback onOpenMenu;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 188,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.outlineVariant.withValues(alpha: 0.35),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onOpenMenu,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                AppImage(
+                  source: item.image,
+                  height: 116,
+                  width: double.infinity,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(14),
+                  ),
                 ),
-              ],
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.8),
-                    Colors.black.withValues(alpha: 0.2),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Color(int.parse(promo['tagBg']!)),
-                      borderRadius: BorderRadius.circular(4),
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      promo['tag']!,
-                      style: const TextStyle(
-                        fontFamily: 'Plus Jakarta Sans',
+                      item.badge,
+                      style: AppTextStyles.labelSm.copyWith(
                         color: Colors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    promo['title']!,
-                    style: const TextStyle(
-                      fontFamily: 'Plus Jakarta Sans',
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    promo['subtitle']!,
-                    style: TextStyle(
-                      fontFamily: 'Be Vietnam Pro',
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildBestSellers() {
-    final List<Map<String, dynamic>> items = [
-      {
-        'name': 'Siomay Ayam Spesial',
-        'merchant': 'Dimsum Nuraos Xpress',
-        'rating': 4.9,
-        'price': 25000.0,
-        'image':
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuDRiZcQvE42wn0W6GvNyYzce3EkVh6BJ9SrmGBDotAQQOIAJ6JZ3syfnhEQSrXepe0S1e3snXyXP0iv3j7NHDp9TEu8FLB2RigtgknmaUzZy1aVskWnaBR4f-jRJWp8FuhNfLP7tKws3um9bmKPebYF7JLBcnB1fjT03348hoZolCWgN7pF7xM3Kg1GNSSC9p0BcOvF_amV1T05D2BFu7MZBldnO7LZEcmIIpmpFhP7Pw8HD7gF5CxvblTGUwHo8WWUwmYB9mWPmRw',
-      },
-      {
-        'name': 'Hakau Udang',
-        'merchant': 'Golden Steam',
-        'rating': 4.8,
-        'price': 32000.0,
-        'image':
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuCi4pQhFrCXDBWosMQxYLUsg3K5Do5A_DB_HLQiyeBU6bQRkfFoBXb5qst8VKWkXD3HjA9Zxff2mkE3lo36iHs2iaIw-yVY9Psru5Gq7YsnJHnUrNg9Y-NDKT2JgnOHJl86O8yGHXErou-DV89WBKva10LF-oeDPYMNKBu3dVb1eAIo83uhSczY4C80xdHs0zNW2QxDezbLLZaFssYBv8sGme8sioWGUg8pbz72jQsv3U71SWJ0o2Q1e35SNb2w1QiZY-xrSIBZGtA',
-      },
-      {
-        'name': 'Dimsum Sapi',
-        'merchant': 'Hao Chi Dimsum',
-        'rating': 4.7,
-        'price': 28000.0,
-        'image':
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuCKZw8Eufa3_e1QhhaEek5J-_8lp4bvW38Q_NV03V9-Fxgsrh00hWRXjad_s8-UqVflErt9qBigdOty6zTEQmtZXJZXheXj8czv6R4QTc0wNjNODB72yUDeQmHB8HC0yQgJxq2j6sMwEETrRmfVuR1x_rZZSH6bePzrt3hf1wPbrXAUQz0m7WJ6XQel02kFxqeH_oJ-C5zMBiZltpUPQHf_nt2aDU_ujhT6xo4yDDVWKRv-EMwmRgzxyfltq7wRZAC9jQ40HuG1TAI',
-      },
-    ];
-
-    return SizedBox(
-      height: 230,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return GestureDetector(
-            onTap: () => context.push('/menu'),
-            child: Container(
-              width: 180,
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.outlineVariant.withValues(alpha: 0.5),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Stack(
+                  Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.labelMd.copyWith(fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.merchantName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySm.copyWith(fontSize: 11),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
                     children: [
-                      ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(16),
-                        ),
-                        child: Image.network(
-                          item['image']!,
-                          height: 120,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
+                      const Icon(Icons.star, color: Colors.amber, size: 14),
+                      const SizedBox(width: 3),
+                      Text(
+                        item.rating.toStringAsFixed(1),
+                        style: AppTextStyles.labelSm.copyWith(
+                          color: AppColors.onBackground,
                         ),
                       ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: Colors.amber,
-                                size: 12,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                item['rating'].toString(),
-                                style: const TextStyle(
-                                  fontFamily: 'Plus Jakarta Sans',
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          item.soldCount,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.labelSm.copyWith(fontSize: 10),
                         ),
                       ),
                     ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item['name']!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.labelMd.copyWith(fontSize: 14),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        price,
+                        style: AppTextStyles.labelMd.copyWith(
+                          color: AppColors.primary,
+                          fontSize: 14,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          item['merchant'] == 'Dimsum Nuraos Xpress'
-                              ? 'Dimsum Nuraos'
-                              : item['merchant']!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.bodySm.copyWith(fontSize: 11),
+                      ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: onAdd,
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.add,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Rp ${(item['price'] as double).toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
-                              style: AppTextStyles.labelMd.copyWith(
-                                color: AppColors.primary,
-                                fontSize: 14,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: AppColors.secondaryContainer,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.add,
-                                color: AppColors.primary,
-                                size: 18,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildNearbyMerchants(BuildContext context) {
-    return Column(
-      children: [
-        // Hero Merchant Card (Dimsum Nuraos Xpress)
-        GestureDetector(
-          onTap: () => context.push('/menu'),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.outlineVariant.withValues(alpha: 0.5),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.06),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                      child: Image.network(
-                        'https://lh3.googleusercontent.com/aida-public/AB6AXuD8uVW4KbsPFtT7ZihWVazX_IBPV_QnlUL8_Ri0YZmWsK9JwMK4xnQvo-6RSqTJpZ-JDh1_rraneVZT-33TbpICV6aYvl1VyMg-IqniAsTshmzUblpez99H-zeZTYdTXySuDmKBkSMVnFiHA53Oj2EL5Vdu3couOla6IQtBhbk9punZqopa9QvOUD64uoPn6cFL0MpNaqbTEGmuwpIpif4HJeK7F8-sbvNSWbvzj6O78xMemy35xvvMC82UJIQ_yqGxftbXL0KjIwM',
-                        height: 160,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.star, color: Colors.white, size: 14),
-                            SizedBox(width: 4),
-                            Text(
-                              '4.8',
-                              style: TextStyle(
-                                fontFamily: 'Plus Jakarta Sans',
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    'Dimsum Nuraos',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTextStyles.headlineMd.copyWith(
-                                      color: AppColors.primary,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Image.network(
-                                  AppAssets.xpressWordmark,
-                                  height: 28,
-                                  fit: BoxFit.contain,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.favorite_border,
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Dimsum kukus bambu artisanal dengan isian premium. Terkenal dengan 4 varian khas: Ayam, Sapi, Udang, dan Keju.',
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.onSurfaceVariant,
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          _buildTag('Pengiriman Cepat'),
-                          _buildTag('HALAL'),
-                          _buildTag('Autentik'),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        height: 1,
-                        color: AppColors.outlineVariant.withValues(alpha: 0.2),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.location_on,
-                                color: AppColors.onSurfaceVariant,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '0.8 km jauhnya',
-                                style: AppTextStyles.labelMd.copyWith(
-                                  color: AppColors.onSurfaceVariant,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: AppColors.onPrimary,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                            ),
-                            onPressed: () => context.push('/menu'),
-                            child: Text(
-                              'Pesan Sekarang',
-                              style: AppTextStyles.labelMd.copyWith(
-                                color: AppColors.onPrimary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Grid of Other Merchants
-        Row(
-          children: [
-            Expanded(
-              child: _buildSecondaryMerchantCard(
-                'Hao Chi Dimsum',
-                'Pangsit & Bakpao',
-                '4.5',
-                'Ongkir Murah',
-                'https://lh3.googleusercontent.com/aida-public/AB6AXuCkzfvu51S9v3BpC8jZ2IroBqjO142BEju76xA07iPmV9wbkS2qNGryAjQ8wNBUEaNtcAC0D7AbDfJImCC2GvNIzAwA-TKm2RuqUfNkc17yLk2mEq0bl7VDfUABpqautXtYPsk9Di3qXqD5khk1Weg7QOeAi0QS99MR3hlZef3jH2iMm2h3uFHmFu3cjQ5sO7WnfuK5mFv0KcdOj2ZRdD4iNXQSDfVHA86eU6F4ZSmKxghx9ig003MFowjRw3XU4bv3QbQEmsRJfYs',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildSecondaryMerchantCard(
-                'Golden Steam',
-                'Kanton Modern',
-                '4.7',
-                'Gratis Ongkir',
-                'https://lh3.googleusercontent.com/aida-public/AB6AXuAfbZ7sF8QF2OYcMDPZrQNZqvRDdjbLTdlFyfjyvkpMeoaR2ysAMAuT7E6svTWGhJ3tsQ4IkjWwAH2LdWg2YpZiu9sLCtLGhkDb767RpIAY4r2sdtRa4DHD3lwlt0lnnY9fbT5MXMLlLC-_km6QIVVMHvjWgSdHOr15Ule08Nw_OUJjEvJsA-b3HIzTZRU-mmuvGMpwIqLOO2uQpFyXbrwt0zNPDXDCz9MzjCjXToyopWe3r8-QMlTbeCF1TbGF90xIlQYoTatKGuI',
-              ),
-            ),
           ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildTag(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text.toUpperCase(),
-        style: const TextStyle(
-          fontFamily: 'Plus Jakarta Sans',
-          color: AppColors.onSurfaceVariant,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.8,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSecondaryMerchantCard(
-    String name,
-    String category,
-    String rating,
-    String promo,
-    String image,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.outlineVariant.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              image: DecorationImage(
-                image: NetworkImage(image),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.labelMd.copyWith(fontSize: 13),
-                      ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.star,
-                          color: AppColors.primary,
-                          size: 12,
-                        ),
-                        const SizedBox(width: 1),
-                        Text(
-                          rating,
-                          style: TextStyle(
-                            fontFamily: 'Plus Jakarta Sans',
-                            color: AppColors.primary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  category,
-                  style: TextStyle(
-                    fontFamily: 'Be Vietnam Pro',
-                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.8),
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  promo,
-                  style: const TextStyle(
-                    fontFamily: 'Be Vietnam Pro',
-                    color: AppColors.primary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav(BuildContext context) {
-    return Container(
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(Icons.home, 'Beranda', true, () {}),
-          _buildNavItem(
-            Icons.receipt_long,
-            'Pesanan',
-            false,
-            () => context.push('/tracking'),
-          ),
-          _buildNavItem(
-            Icons.shopping_basket,
-            'Keranjang',
-            false,
-            () => context.push('/menu'),
-          ),
-          _buildNavItem(Icons.person, 'Profil', false, () {}),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    IconData icon,
-    String label,
-    bool isActive,
-    VoidCallback onTap,
-  ) {
-    if (isActive) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.secondaryContainer,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: AppColors.onSecondaryContainer, size: 20),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: AppTextStyles.labelSm.copyWith(
-                color: AppColors.onSecondaryContainer,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: AppColors.onSurfaceVariant),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTextStyles.labelSm.copyWith(
-              color: AppColors.onSurfaceVariant,
-              fontSize: 10,
-            ),
-          ),
-        ],
       ),
     );
   }

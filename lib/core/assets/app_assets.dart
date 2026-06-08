@@ -1,6 +1,9 @@
 class AppAssets {
   AppAssets._();
 
+  static const String dimsumDeliveryHero =
+      'assets/images/dimsum_delivery_hero.png';
+
   static const String profileAvatar =
       'https://lh3.googleusercontent.com/aida-public/AB6AXuCiefWDcedbHEG__i9er7iAOjtCVUtXSpbfUiuHZfDVmn06YqZcKndkSqGNdCbb0PmTkaAtK2Ap8xkREZoQBQEdhv9jpCefPhnuQay_3pV45n0vYq9KBc6sZCgwLdSIsHqPjbDRoCzc0Af7PXNYw5hXxw0JuCtokEPZtLiG_g6gmT6BMdyaWu6t37Xi6oQJVnwgzP7f3yODxdUNhAjhfiyXJX-d4JcXN2o1Y6QA10bniAxl4CaEFbolDCq_ExYZZfY3Mwlfegoh2pQ';
 

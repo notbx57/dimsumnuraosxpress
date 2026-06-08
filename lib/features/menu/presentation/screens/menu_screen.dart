@@ -4,6 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:dimsumnuraosxpress/core/assets/app_assets.dart';
 import 'package:dimsumnuraosxpress/core/theme/app_colors.dart';
 import 'package:dimsumnuraosxpress/core/theme/app_text_styles.dart';
+import 'package:dimsumnuraosxpress/core/widgets/app_bottom_nav.dart';
+import 'package:dimsumnuraosxpress/core/widgets/app_image.dart';
+import 'package:dimsumnuraosxpress/core/widgets/skeleton_loader.dart';
+import 'package:dimsumnuraosxpress/features/menu/data/mock_dish_data.dart';
+import 'package:dimsumnuraosxpress/features/menu/presentation/widgets/menu_detail_sheet.dart';
 import 'package:dimsumnuraosxpress/features/menu/state/cart_provider.dart';
 
 class MenuScreen extends ConsumerStatefulWidget {
@@ -14,69 +19,8 @@ class MenuScreen extends ConsumerStatefulWidget {
 }
 
 class _MenuScreenState extends ConsumerState<MenuScreen>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
-  final ScrollController _scrollController = ScrollController();
-
-  final List<CartItem> signatureItems = [
-    CartItem(
-      name: 'Ayam',
-      chineseName: '鸡',
-      price: 25000.0,
-      image:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuC8zRB7fnGTSyEiCsaA3XXGHgstmE3StecrJJWiVpg1awbnuj_-etsJsuBbmRqQC1aawrBo4h3DERWxdYeXPh2TiVZ7RodVheFWy7Xw9NLqnnR85WzWMU18V6FSOmGp-HqtOLqvyHl94lFf_YlsiJlRQ46547t6XCxMaLJruAzViqOdgIcZA-ly5SGvQIt2z4crYcszJvYb-fGQsT25jMQIzrczYVuwJ9cs66BG5ji3DF9VovYvpbd5DAltrz-Y50WK8-2OKJD6cU0',
-      description: 'Pangsit kukus ayam klasik dengan kaldu gurih.',
-    ),
-    CartItem(
-      name: 'Beef',
-      chineseName: '牛',
-      price: 28000.0,
-      image:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuCKZw8Eufa3_e1QhhaEek5J-_8lp4bvW38Q_NV03V9-Fxgsrh00hWRXjad_s8-UqVflErt9qBigdOty6zTEQmtZXJZXheXj8czv6R4QTc0wNjNODB72yUDeQmHB8HC0yQgJxq2j6sMwEETrRmfVuR1x_rZZSH6bePzrt3hf1wPbrXAUQz0m7WJ6XQel02kFxqeH_oJ-C5zMBiZltpUPQHf_nt2aDU_ujhT6xo4yDDVWKRv-EMwmRgzxyfltq7wRZAC9jQ40HuG1TAI',
-      description: 'Campuran daging sapi wagyu premium dengan rempah aromatik.',
-    ),
-    CartItem(
-      name: 'Udang',
-      chineseName: '虾',
-      price: 32000.0,
-      image:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuCi4pQhFrCXDBWosMQxYLUsg3K5Do5A_DB_HLQiyeBU6bQRkfFoBXb5qst8VKWkXD3HjA9Zxff2mkE3lo36iHs2iaIw-yVY9Psru5Gq7YsnJHnUrNg9Y-NDKT2JgnOHJl86O8yGHXErou-DV89WBKva10LF-oeDPYMNKBu3dVb1eAIo83uhSczY4C80xdHs0zNW2QxDezbLLZaFssYBv8sGme8sioWGUg8pbz72jQsv3U71SWJ0o2Q1e35SNb2w1QiZY-xrSIBZGtA',
-      description: 'Udang segar utuh yang padat dibungkus dalam kulit kristal.',
-    ),
-    CartItem(
-      name: 'Keju',
-      chineseName: '芝士',
-      price: 30000.0,
-      image:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuCIG5ZsaZWVqSnlSJ5zngYOFAJx1hTOPxiZa6o3qS9e6XyBdoJ6VipYgy6arQmxxdBXK00qkmGVt4UC0_5a6ct6HgCKIpU8fBoEygNJzrVqC0Ebm39aYB8tIcnbtvtpqlYbB_xp6mc8m9weAUab6O_YXAUGBerUE-mDJxa56TUsI3u3evWmnxkZgdYy1g684QWupQ1RDrKGrESpvioiBmmzf6EwX2_1hsH9tKX9VYl89hbeHoHBpgBAQZSscVB9BqFnFqEsWBbGBM8',
-      description: 'Perpaduan mozzarella lumer dengan basis ayam tradisional.',
-    ),
-  ];
-
-  final List<CartItem> frozenItems = [
-    CartItem(
-      name: 'Paket Bundel Keluarga',
-      price: 145000.0,
-      image:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDRiZcQvE42wn0W6GvNyYzce3EkVh6BJ9SrmGBDotAQQOIAJ6JZ3syfnhEQSrXepe0S1e3snXyXP0iv3j7NHDp9TEu8FLB2RigtgknmaUzZy1aVskWnaBR4f-jRJWp8FuhNfLP7tKws3um9bmKPebYF7JLBcnB1fjT03348hoZolCWgN7pF7xM3Kg1GNSSC9p0BcOvF_amV1T05D2BFu7MZBldnO7LZEcmIIpmpFhP7Pw8HD7gF5CxvblTGUwHo8WWUwmYB9mWPmRw',
-      description:
-          '24 Potong Campuran (Ayam, Sapi, Udang, Keju) dalam kemasan beku vakum.',
-    ),
-    CartItem(
-      name: 'Ayam Beku',
-      price: 75000.0,
-      image:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDRiZcQvE42wn0W6GvNyYzce3EkVh6BJ9SrmGBDotAQQOIAJ6JZ3syfnhEQSrXepe0S1e3snXyXP0iv3j7NHDp9TEu8FLB2RigtgknmaUzZy1aVskWnaBR4f-jRJWp8FuhNfLP7tKws3um9bmKPebYF7JLBcnB1fjT03348hoZolCWgN7pF7xM3Kg1GNSSC9p0BcOvF_amV1T05D2BFu7MZBldnO7LZEcmIIpmpFhP7Pw8HD7gF5CxvblTGUwHo8WWUwmYB9mWPmRw',
-      description: '12 Potong Dimsum Ayam beku siap kukus.',
-    ),
-    CartItem(
-      name: 'Udang Beku',
-      price: 90000.0,
-      image:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuCi4pQhFrCXDBWosMQxYLUsg3K5Do5A_DB_HLQiyeBU6bQRkfFoBXb5qst8VKWkXD3HjA9Zxff2mkE3lo36iHs2iaIw-yVY9Psru5Gq7YsnJHnUrNg9Y-NDKT2JgnOHJl86O8yGHXErou-DV89WBKva10LF-oeDPYMNKBu3dVb1eAIo83uhSczY4C80xdHs0zNW2QxDezbLLZaFssYBv8sGme8sioWGUg8pbz72jQsv3U71SWJ0o2Q1e35SNb2w1QiZY-xrSIBZGtA',
-      description: '12 Potong Dimsum Udang beku siap kukus.',
-    ),
-  ];
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
 
   @override
   void initState() {
@@ -87,7 +31,6 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -106,11 +49,11 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.menu, color: AppColors.primary),
-          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
         ),
         title: Text(
-          'Dimsum Nuraos',
+          'Menu Dimsum',
           style: AppTextStyles.labelMd.copyWith(
             color: AppColors.primary,
             fontSize: 18,
@@ -118,625 +61,701 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
           ),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.outlineVariant, width: 1),
-                image: const DecorationImage(
-                  image: NetworkImage(AppAssets.profileAvatar),
-                  fit: BoxFit.cover,
-                ),
+          IconButton(
+            tooltip: 'Keranjang',
+            onPressed: () => context.push('/cart'),
+            icon: Badge(
+              isLabelVisible: cart.totalItems > 0,
+              label: Text(cart.totalItems.toString()),
+              child: const Icon(
+                Icons.shopping_basket,
+                color: AppColors.primary,
               ),
             ),
           ),
+          const SizedBox(width: 8),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0),
-          child: Container(
-            color: AppColors.outlineVariant.withValues(alpha: 0.5),
-            height: 1.0,
-          ),
+      ),
+      body: BackendLoadingSimulator(
+        delay: const Duration(milliseconds: 950),
+        skeleton: const _MenuSkeleton(),
+        child: Stack(
+          children: [
+            NestedScrollView(
+              headerSliverBuilder: (context, _) {
+                return [
+                  SliverToBoxAdapter(child: _buildHeroBanner()),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _StickyTabsDelegate(
+                      TabBar(
+                        controller: _tabController,
+                        indicatorColor: AppColors.primary,
+                        labelColor: AppColors.primary,
+                        unselectedLabelColor: AppColors.onSurfaceVariant,
+                        labelStyle: AppTextStyles.labelMd,
+                        tabs: const [
+                          Tab(text: 'Best Seller'),
+                          Tab(text: 'Paket'),
+                          Tab(text: 'Mitra'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ];
+              },
+              body: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildMenuList(mockBestSellerItems),
+                  _buildMenuList(mockBundleItems),
+                  _buildMerchantMenu(),
+                ],
+              ),
+            ),
+            if (cart.totalItems > 0)
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 16,
+                child: _CartFloatingBar(
+                  totalItems: cart.totalItems,
+                  subtotal: _formatRupiah(cart.subtotal),
+                  onTap: () => context.push('/cart'),
+                ),
+              ),
+          ],
         ),
       ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            controller: _scrollController,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Hero banner
-                _buildHeroBanner(),
-
-                // Sticky Tab Bar
-                Container(
-                  color: AppColors.surfaceBright,
-                  child: TabBar(
-                    controller: _tabController,
-                    indicatorColor: AppColors.primary,
-                    indicatorWeight: 3,
-                    labelColor: AppColors.primary,
-                    unselectedLabelColor: AppColors.onSurfaceVariant,
-                    labelStyle: AppTextStyles.labelMd,
-                    tabs: const [
-                      Tab(text: 'Rasa Khas'),
-                      Tab(text: 'Paket Beku'),
-                      Tab(text: 'Minuman'),
-                    ],
-                  ),
-                ),
-
-                // Tab Content View items
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Section 1: Signature Items
-                      _buildSectionTitle('Rasa Khas', 'Memiliki 4 Varian'),
-                      const SizedBox(height: 16),
-                      ListView.builder(
-                        physics: const NeverScrollableScrollPhysics(),
-                        shrinkWrap: true,
-                        itemCount: signatureItems.length,
-                        itemBuilder: (context, index) {
-                          final item = signatureItems[index];
-                          return _buildMenuItemCard(item);
-                        },
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Section 2: Frozen Pack Items
-                      _buildSectionTitle('Paket Beku', 'Siap Kukus di Rumah'),
-                      const SizedBox(height: 16),
-                      _buildFrozenBentoGrid(),
-                      const SizedBox(
-                        height: 100,
-                      ), // padding bottom for cart overlay
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Bottom persistent Cart overlay
-          if (cart.totalItems > 0)
-            Positioned(
-              bottom: 96,
-              left: 20,
-              right: 20,
-              child: _buildCartBottomBar(cart),
-            ),
-        ],
-      ),
-      bottomNavigationBar: _buildBottomNav(context),
+      bottomNavigationBar: const AppBottomNav(activeTab: AppTab.none),
     );
   }
 
   Widget _buildHeroBanner() {
-    return Container(
-      height: 240,
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: NetworkImage(
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuABT6gTv3uMZNt2531ri4xz03yUHZPJJ8oUtpshnxsYU8hmlG6ecS5ikZVvRmhB2a8U80IhIhjPCvYpWuwqCfF3JLWHlaoK7V4Gb0sCeLiuO0S5Y6NA8wO_mxqR-FLvcvz3iT1uKcedySmn44f_2YhybBR53ryDngQSVlU3SbYp-8w_eiEw2oT6JPB4UEcCYYi9OYMiiQQDpeD5_i6lMEgBveT5pOU5O1RjA_GluecekcKyykgD4dIRv0t44HngyYu4U7zmmrUdkxI',
-          ),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              Colors.black.withValues(alpha: 0.7),
-              Colors.black.withValues(alpha: 0.1),
-            ],
-          ),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              'Dimsum Nuraos',
-              style: AppTextStyles.headlineXl.copyWith(
-                color: Colors.white,
-                fontSize: 32,
+    return SizedBox(
+      height: 230,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          const AppImage(source: AppAssets.dimsumDeliveryHero),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.72),
+                  Colors.black.withValues(alpha: 0.12),
+                  Colors.transparent,
+                ],
               ),
             ),
-            const SizedBox(height: 2),
-            Image.network(
-              AppAssets.xpressWordmark,
-              height: 22,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(height: 4),
-            Row(
+          ),
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.star, color: Colors.amber, size: 16),
-                const SizedBox(width: 4),
                 Text(
-                  '4.8 (2rb+ ulasan) • 15-25 menit',
-                  style: AppTextStyles.labelSm.copyWith(color: Colors.white),
+                  'Dimsum pilihan mitra',
+                  style: AppTextStyles.headlineMd.copyWith(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _HeroChip(icon: Icons.star, text: 'Rating 4.8+'),
+                    _HeroChip(icon: Icons.local_fire_department, text: 'Top'),
+                    _HeroChip(icon: Icons.delivery_dining, text: '15-25 mnt'),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, String subtitle) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: AppTextStyles.headlineMd.copyWith(
-            color: AppColors.primary,
-            fontWeight: FontWeight.bold,
+  Widget _buildMenuList(List<CartItem> items) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
+      itemCount: items.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 14),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final currentQty = ref
+            .watch(cartProvider)
+            .items
+            .where((cartItem) => cartItem.id == item.id)
+            .fold(0, (sum, cartItem) => sum + cartItem.quantity);
+
+        return _MenuItemCard(
+          item: item,
+          price: _formatRupiah(item.price),
+          quantity: currentQty,
+          onOpen: () => _showMenuDetail(item),
+          onAdd: () => ref.read(cartProvider.notifier).addItem(item),
+          onRemove: () => ref.read(cartProvider.notifier).removeItem(item.id),
+        );
+      },
+    );
+  }
+
+  Widget _buildMerchantMenu() {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
+      itemCount: mockMerchantNames.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final name = mockMerchantNames[index];
+        final item = mockAllMenuItems[index % mockAllMenuItems.length];
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppColors.outlineVariant.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Row(
+            children: [
+              AppImage(
+                source: AppAssets.dimsumDeliveryHero,
+                width: 74,
+                height: 74,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.labelMd.copyWith(fontSize: 16),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${item.rating.toStringAsFixed(1)} rating - ${item.merchantDistance} dari Anda',
+                      style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: const [
+                        _SmallTag(text: 'Best seller'),
+                        _SmallTag(text: 'Cepat'),
+                        _SmallTag(text: 'Halal'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.primary),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<CartItem> _relatedItemsFor(CartItem selectedItem) {
+    return mockAllMenuItems.where((item) {
+      return item.merchantName == selectedItem.merchantName &&
+          item.id != selectedItem.id;
+    }).toList();
+  }
+
+  void _showMenuDetail(CartItem item) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return MenuDetailSheet(
+          item: item,
+          relatedItems: _relatedItemsFor(item),
+          formatPrice: _formatRupiah,
+          onAdd: _addItemFromDetail,
+          onOpenRelated: (relatedItem) {
+            Navigator.of(sheetContext).pop();
+            Future<void>.microtask(() {
+              if (!mounted) return;
+              _showMenuDetail(relatedItem);
+            });
+          },
+        );
+      },
+    );
+  }
+
+  void _addItemFromDetail(CartItem item) {
+    ref.read(cartProvider.notifier).addItem(item);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${item.name} masuk keranjang'),
+        duration: const Duration(milliseconds: 900),
+      ),
+    );
+  }
+}
+
+class _MenuSkeleton extends StatelessWidget {
+  const _MenuSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      slivers: [
+        const SliverToBoxAdapter(
+          child: SkeletonBox(height: 230, borderRadius: 0),
+        ),
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _StickyTabsDelegate(
+            Container(
+              color: AppColors.surface,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: const Row(
+                children: [
+                  Expanded(child: SkeletonBox(height: 32, borderRadius: 18)),
+                  SizedBox(width: 10),
+                  Expanded(child: SkeletonBox(height: 32, borderRadius: 18)),
+                  SizedBox(width: 10),
+                  Expanded(child: SkeletonBox(height: 32, borderRadius: 18)),
+                ],
+              ),
+            ),
           ),
         ),
-        Text(
-          subtitle,
-          style: AppTextStyles.bodySm.copyWith(fontStyle: FontStyle.italic),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(childCount: 5, (
+              context,
+              index,
+            ) {
+              return Padding(
+                padding: EdgeInsets.only(bottom: index == 4 ? 0 : 14),
+                child: const _MenuItemCardSkeleton(),
+              );
+            }),
+          ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildMenuItemCard(CartItem item) {
-    final cart = ref.watch(cartProvider);
-    final cartItemIndex = cart.items.indexWhere((i) => i.name == item.name);
-    final currentQty = cartItemIndex >= 0
-        ? cart.items[cartItemIndex].quantity
-        : 0;
+class _MenuItemCardSkeleton extends StatelessWidget {
+  const _MenuItemCardSkeleton();
 
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFEEDDC3)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.outlineVariant.withValues(alpha: 0.25),
+        ),
       ),
-      child: Row(
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.horizontal(
-              left: Radius.circular(12),
-            ),
-            child: Image.network(
-              item.image,
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-            ),
-          ),
+          SkeletonBox(width: 104, height: 104, borderRadius: 12),
+          SizedBox(width: 12),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${item.name} (${item.chineseName})',
-                        style: AppTextStyles.labelMd.copyWith(fontSize: 15),
-                      ),
-                      Text(
-                        _formatRupiah(item.price),
-                        style: AppTextStyles.labelMd.copyWith(
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.description,
-                    style: AppTextStyles.bodySm.copyWith(fontSize: 12),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (currentQty > 0) ...[
-                        GestureDetector(
-                          onTap: () {
-                            ref
-                                .read(cartProvider.notifier)
-                                .removeItem(item.name);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainer,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Icon(
-                              Icons.remove,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                          child: Text(
-                            currentQty.toString(),
-                            style: AppTextStyles.labelMd.copyWith(
-                              color: AppColors.onBackground,
-                            ),
-                          ),
-                        ),
-                      ],
-                      GestureDetector(
-                        onTap: () {
-                          ref.read(cartProvider.notifier).addItem(item);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Icon(
-                            Icons.add,
-                            size: 16,
-                            color: AppColors.onPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFrozenBentoGrid() {
-    return Column(
-      children: [
-        // Large Card (Family Pack Bundle)
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.outlineVariant.withValues(alpha: 0.5),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                frozenItems[0].name,
-                style: AppTextStyles.labelMd.copyWith(fontSize: 16),
-              ),
-              const SizedBox(height: 2),
-              Text(frozenItems[0].description, style: AppTextStyles.bodySm),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _formatRupiah(frozenItems[0].price),
-                    style: AppTextStyles.headlineMd.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.secondary,
-                      foregroundColor: AppColors.onSecondary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: () {
-                      ref.read(cartProvider.notifier).addItem(frozenItems[0]);
-                    },
-                    child: Text(
-                      'Tambah Paket',
-                      style: AppTextStyles.labelMd.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Two Grid Cards
-        Row(
-          children: [
-            Expanded(child: _buildFrozenGridCard(frozenItems[1])),
-            const SizedBox(width: 12),
-            Expanded(child: _buildFrozenGridCard(frozenItems[2])),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFrozenGridCard(CartItem item) {
-    final cart = ref.watch(cartProvider);
-    final cartItemIndex = cart.items.indexWhere((i) => i.name == item.name);
-    final currentQty = cartItemIndex >= 0
-        ? cart.items[cartItemIndex].quantity
-        : 0;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.ac_unit, color: AppColors.primary, size: 36),
-          const SizedBox(height: 8),
-          Text(item.name, style: AppTextStyles.labelMd.copyWith(fontSize: 14)),
-          const SizedBox(height: 4),
-          Text(
-            _formatRupiah(item.price),
-            style: const TextStyle(
-              fontFamily: 'Plus Jakarta Sans',
-              color: AppColors.primary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (currentQty > 0) ...[
-                GestureDetector(
-                  onTap: () =>
-                      ref.read(cartProvider.notifier).removeItem(item.name),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.surfaceContainerLowest,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.remove,
-                      size: 16,
-                      color: AppColors.primary,
-                    ),
-                  ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: SkeletonBox(height: 18, borderRadius: 6)),
+                    SizedBox(width: 16),
+                    SkeletonBox(width: 76, height: 16, borderRadius: 6),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                  child: Text(
-                    currentQty.toString(),
-                    style: AppTextStyles.labelMd,
-                  ),
+                SizedBox(height: 10),
+                SkeletonBox(width: 120, height: 12, borderRadius: 6),
+                SizedBox(height: 8),
+                SkeletonBox(
+                  width: double.infinity,
+                  height: 12,
+                  borderRadius: 6,
+                ),
+                SizedBox(height: 6),
+                SkeletonBox(width: 160, height: 12, borderRadius: 6),
+                SizedBox(height: 13),
+                Row(
+                  children: [
+                    SkeletonBox(width: 90, height: 12, borderRadius: 6),
+                    Spacer(),
+                    SkeletonBox(width: 28, height: 28, borderRadius: 8),
+                  ],
                 ),
               ],
-              GestureDetector(
-                onTap: () => ref.read(cartProvider.notifier).addItem(item),
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.add,
-                    size: 16,
-                    color: AppColors.onPrimary,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildCartBottomBar(CartState cart) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+class _MenuItemCard extends StatelessWidget {
+  const _MenuItemCard({
+    required this.item,
+    required this.price,
+    required this.quantity,
+    required this.onOpen,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  final CartItem item;
+  final String price;
+  final int quantity;
+  final VoidCallback onOpen;
+  final VoidCallback onAdd;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onOpen,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppColors.outlineVariant.withValues(alpha: 0.35),
+            ),
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Stack(
-                clipBehavior: Clip.none,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.shopping_basket,
-                      color: Colors.white,
-                    ),
+                  AppImage(
+                    source: item.image,
+                    width: 104,
+                    height: 104,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  Positioned(
-                    top: -6,
-                    right: -6,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: const BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        cart.totalItems.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                  if (item.badge.isNotEmpty)
+                    Positioned(
+                      left: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          item.badge,
+                          style: AppTextStyles.labelSm.copyWith(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${cart.totalItems} item di keranjang',
-                    style: AppTextStyles.labelSm.copyWith(color: Colors.white),
-                  ),
-                  Text(
-                    _formatRupiah(cart.subtotal),
-                    style: AppTextStyles.headlineMd.copyWith(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.labelMd.copyWith(fontSize: 16),
+                          ),
+                        ),
+                        Text(
+                          price,
+                          style: AppTextStyles.labelMd.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 5),
+                    Text(
+                      item.merchantName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      item.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 15),
+                        const SizedBox(width: 3),
+                        Text(
+                          item.rating.toStringAsFixed(1),
+                          style: AppTextStyles.labelSm.copyWith(
+                            color: AppColors.onBackground,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            item.soldCount,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.labelSm.copyWith(fontSize: 10),
+                          ),
+                        ),
+                        if (quantity > 0) ...[
+                          _QtyButton(icon: Icons.remove, onTap: onRemove),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(quantity.toString()),
+                          ),
+                        ],
+                        _QtyButton(
+                          icon: Icons.add,
+                          isPrimary: true,
+                          onTap: onAdd,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: AppColors.primary,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            onPressed: () => context.push('/checkout'),
-            child: Text(
-              'Bayar Sekarang',
-              style: AppTextStyles.labelMd.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildBottomNav(BuildContext context) {
-    return Container(
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
+class _CartFloatingBar extends StatelessWidget {
+  const _CartFloatingBar({
+    required this.totalItems,
+    required this.subtotal,
+    required this.onTap,
+  });
+
+  final int totalItems;
+  final String subtotal;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.25),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        ],
+          child: Row(
+            children: [
+              Badge(
+                label: Text(totalItems.toString()),
+                child: const Icon(Icons.shopping_basket, color: Colors.white),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$totalItems item di keranjang',
+                      style: AppTextStyles.labelSm.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtotal,
+                      style: AppTextStyles.labelMd.copyWith(
+                        color: Colors.white,
+                        fontSize: 17,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                'Lihat',
+                style: AppTextStyles.labelMd.copyWith(color: Colors.white),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QtyButton extends StatelessWidget {
+  const _QtyButton({
+    required this.icon,
+    required this.onTap,
+    this.isPrimary = false,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isPrimary;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: isPrimary ? AppColors.primary : AppColors.surfaceContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 16,
+          color: isPrimary ? Colors.white : AppColors.primary,
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroChip extends StatelessWidget {
+  const _HeroChip({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.32)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(Icons.home, 'Beranda', false, () => context.push('/')),
-          _buildNavItem(Icons.receipt_long, 'Pesanan', true, () {}),
-          _buildNavItem(Icons.shopping_basket, 'Keranjang', false, () {}),
-          _buildNavItem(Icons.person, 'Profil', false, () {}),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    IconData icon,
-    String label,
-    bool isActive,
-    VoidCallback onTap,
-  ) {
-    if (isActive) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.secondaryContainer,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: AppColors.onSecondaryContainer, size: 20),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: AppTextStyles.labelSm.copyWith(
-                color: AppColors.onSecondaryContainer,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
         mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: AppColors.onSurfaceVariant),
-          const SizedBox(height: 4),
+          Icon(icon, color: Colors.white, size: 14),
+          const SizedBox(width: 5),
           Text(
-            label,
+            text,
             style: AppTextStyles.labelSm.copyWith(
-              color: AppColors.onSurfaceVariant,
-              fontSize: 10,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+class _SmallTag extends StatelessWidget {
+  const _SmallTag({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: AppTextStyles.labelSm.copyWith(
+          color: AppColors.onSurfaceVariant,
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
+}
+
+class _StickyTabsDelegate extends SliverPersistentHeaderDelegate {
+  _StickyTabsDelegate(this.tabBar);
+
+  final Widget tabBar;
+
+  @override
+  double get minExtent => 52;
+
+  @override
+  double get maxExtent => 52;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(color: AppColors.surface, child: tabBar);
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyTabsDelegate oldDelegate) {
+    return oldDelegate.tabBar != tabBar;
   }
 }

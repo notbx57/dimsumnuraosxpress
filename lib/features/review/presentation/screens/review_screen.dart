@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dimsumnuraosxpress/core/assets/app_assets.dart';
 import 'package:dimsumnuraosxpress/core/theme/app_colors.dart';
 import 'package:dimsumnuraosxpress/core/theme/app_text_styles.dart';
+import 'package:dimsumnuraosxpress/features/orders/state/order_provider.dart';
 
-class ReviewScreen extends StatefulWidget {
+class ReviewScreen extends ConsumerStatefulWidget {
   const ReviewScreen({super.key});
 
   @override
-  State<ReviewScreen> createState() => _ReviewScreenState();
+  ConsumerState<ReviewScreen> createState() => _ReviewScreenState();
 }
 
-class _ReviewScreenState extends State<ReviewScreen> {
+class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   int _merchantRating = 0;
   int _driverRating = 0;
   String _selectedTip = '';
@@ -25,6 +27,65 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final order = ref.watch(orderProvider);
+    if (order == null || order.status != OrderStatus.completed) {
+      return Scaffold(
+        backgroundColor: AppColors.surface,
+        appBar: AppBar(
+          backgroundColor: AppColors.surface,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+            onPressed: () => context.go('/tracking', extra: -1),
+          ),
+          title: Text(
+            'Rating',
+            style: AppTextStyles.labelMd.copyWith(
+              color: AppColors.primary,
+              fontSize: 18,
+            ),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.lock_clock,
+                  color: AppColors.primary,
+                  size: 64,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Rating belum tersedia',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.headlineMd.copyWith(fontSize: 22),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Anda bisa memberi rating setelah status pesanan selesai.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodyMd.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => context.go('/tracking', extra: -1),
+                  child: const Text('Lihat Pesanan'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -108,12 +169,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         ),
                       ),
                       onPressed: () {
+                        ref.read(orderProvider.notifier).markRated();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Terima kasih atas penilaian Anda!'),
                           ),
                         );
-                        context.go('/'); // Back to home
+                        context.go('/tracking', extra: -1);
                       },
                       child: Text(
                         'Kembali ke Beranda',
@@ -155,11 +217,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
           child: Column(
             children: [
               // Digital Steamer Basket Image
-              Image.network(
-                'https://lh3.googleusercontent.com/aida-public/AB6AXuAgh5zp7MUICR_WN98H-ZiWfuO7GsONP5A9CLZE1EidqP1RnDkwScPcodbLCiy_e7PTmWmxxF1RymUc8YN0IzTu4MoanDQ9HzWrLTXFpj-L6h3-a_Dtj7wffacK-Dc4W5rR5UrLK9v5OLcw3crm1JWSIdOYjdRzQiv1wNPg8LIVpImZPqOXb5yKrZjOLT33LA_s956HMFv-OQ0SeLeAMuAECJX86oS1ltYCdaQWYyoKTJZNURSqsN4EvKQkrqwEDawqCBs99Fr3DS8',
+              Image.asset(
+                AppAssets.dimsumDeliveryHero,
                 width: 200,
                 height: 200,
-                fit: BoxFit.contain,
+                fit: BoxFit.cover,
               ),
               const SizedBox(height: 8),
               Image.network(
